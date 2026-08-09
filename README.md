@@ -1,19 +1,22 @@
-# nolocksupabase
+# nolocksupabase v1.2
 
-Versione 1.1: esegue 10 SELECT reali sulla tabella `public.keepalive`
-per ciascun progetto Supabase.
+Fa 10 SELECT sulla tabella `public.keepalive` per ciascun Supabase.
+Se uno o più progetti falliscono, invia una mail tramite Resend.
 
-## Importante
-Le URL e le anon/publishable key restano nelle Environment Variables di Vercel.
-Non inserirle su GitHub.
+## Variabili Vercel da aggiungere
+- `RESEND_API_KEY`
+- `ALERT_EMAIL` = `kevindavide31@gmail.com`
+- `ALERT_FROM` opzionale
 
-## Tabella richiesta su ogni Supabase
-Deve esistere `public.keepalive` ed essere leggibile dal ruolo anon tramite RLS policy.
+Se `ALERT_FROM` è vuoto, viene usato:
+`Supabase Keeper <onboarding@resend.dev>`
 
-## Cron
-Ogni giorno alle 10:00 UTC Vercel richiama `/api/keepalive`.
+Nota: `onboarding@resend.dev` è un mittente di test Resend e può inviare soltanto
+all'indirizzo associato all'account Resend. Per uso normale configura un dominio
+verificato su Resend e imposta `ALERT_FROM`, ad esempio:
+`Supabase Keeper <alerts@tuodominio.it>`
 
-## Risultati
-- HTTP 200 = tutte le 10 richieste sono riuscite su tutti i progetti.
-- HTTP 207 = almeno una richiesta/progetto ha fallito.
-- HTTP 401 = CRON_SECRET non valido/mancante.
+## Stati
+- 200: tutti i Supabase OK, nessuna email
+- 207: almeno un Supabase in errore; tenta l'invio email
+- 401: chiamata non autorizzata
