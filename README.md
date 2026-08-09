@@ -1,43 +1,19 @@
 # nolocksupabase
 
-Keeper centralizzato per effettuare richieste periodiche ai progetti Supabase.
+Versione 1.1: esegue 10 SELECT reali sulla tabella `public.keepalive`
+per ciascun progetto Supabase.
 
-## Sicurezza
+## Importante
+Le URL e le anon/publishable key restano nelle Environment Variables di Vercel.
+Non inserirle su GitHub.
 
-Le chiavi NON sono incluse nel repository. Inseriscile nelle Environment Variables di Vercel.
-Non usare `service_role` / secret key: usa soltanto `anon` o publishable key.
-
-## Variabili Vercel
-
-Crea:
-- `CRON_SECRET`
-- `INVENTARIODPZ_URL`, `INVENTARIODPZ_KEY`
-- `GESTIONALEDPZ_URL`, `GESTIONALEDPZ_KEY`
-- `COMANDAPP_URL`, `COMANDAPP_KEY`
-- `DUEPUNTOZERO_URL`, `DUEPUNTOZERO_KEY`
-- `DAMORGANTE_URL`, `DAMORGANTE_KEY`
-- `TAVERNETTA_URL`, `TAVERNETTA_KEY`
-
-Imposta le variabili almeno per Production.
+## Tabella richiesta su ogni Supabase
+Deve esistere `public.keepalive` ed essere leggibile dal ruolo anon tramite RLS policy.
 
 ## Cron
+Ogni giorno alle 10:00 UTC Vercel richiama `/api/keepalive`.
 
-`vercel.json` richiama `/api/keepalive` ogni giorno alle 10:00 UTC.
-Vercel invia automaticamente `Authorization: Bearer <CRON_SECRET>` quando `CRON_SECRET`
-è configurato nel progetto.
-
-A ogni esecuzione vengono effettuate 10 richieste per ciascun Supabase.
-
-## Test manuale
-
-Dopo il deploy puoi chiamare:
-
-curl -H "Authorization: Bearer IL_TUO_CRON_SECRET" https://TUO-DOMINIO.vercel.app/api/keepalive
-
-La risposta JSON mostra lo stato di ogni progetto.
-
-## Nota
-
-Questo keeper genera attività esterna verso l'API Supabase, ma non costituisce una
-garanzia contrattuale contro il pausing dei progetti Free. Per la garanzia ufficiale
-contro il pausing occorre fare riferimento al piano Supabase applicabile.
+## Risultati
+- HTTP 200 = tutte le 10 richieste sono riuscite su tutti i progetti.
+- HTTP 207 = almeno una richiesta/progetto ha fallito.
+- HTTP 401 = CRON_SECRET non valido/mancante.
