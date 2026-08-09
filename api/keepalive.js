@@ -11,8 +11,7 @@ const REQUESTS_PER_PROJECT = 10;
 
 function authorized(req) {
   const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  return req.headers.authorization === `Bearer ${secret}`;
+  return Boolean(secret) && req.headers.authorization === `Bearer ${secret}`;
 }
 
 async function pingProject(name, url, key) {
@@ -20,30 +19,31 @@ async function pingProject(name, url, key) {
     return { name, ok: false, error: "Variabili ambiente mancanti" };
   }
 
-  const endpoint = `${url.replace(/\/$/, "")}/rest/v1/`;
+  const endpoint =
+    `${url.replace(/\/$/, "")}/rest/v1/keepalive?select=id&limit=1`;
+
   const attempts = [];
 
   for (let i = 0; i < REQUESTS_PER_PROJECT; i++) {
     try {
-      // Chiamata esterna al Data REST API. Non richiede una tabella keepalive.
       const response = await fetch(endpoint, {
         method: "GET",
         headers: {
           apikey: key,
           Authorization: `Bearer ${key}`,
-          Accept: "application/openapi+json, application/json",
+          Accept: "application/json",
           "Cache-Control": "no-store",
         },
         cache: "no-store",
       });
 
-      // Consumiamo il body così la richiesta viene completata.
-      await response.text();
+      const body = await response.text();
 
       attempts.push({
         attempt: i + 1,
         ok: response.ok,
         status: response.status,
+        body: response.ok ? undefined : body.slice(0, 300),
       });
     } catch (error) {
       attempts.push({
@@ -54,10 +54,12 @@ async function pingProject(name, url, key) {
     }
   }
 
+  const successfulRequests = attempts.filter((x) => x.ok).length;
+
   return {
     name,
-    ok: attempts.some((x) => x.ok),
-    successfulRequests: attempts.filter((x) => x.ok).length,
+    ok: successfulRequests === REQUESTS_PER_PROJECT,
+    successfulRequests,
     totalRequests: REQUESTS_PER_PROJECT,
     attempts,
   };
